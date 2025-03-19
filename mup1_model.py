@@ -32,18 +32,39 @@ def model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km):
     return dy
 
 # parameters (filled in the ones I think would be the same or similar to Fur4)
-p = '' # units mup1 per millisecond (mup1 production rate)
-h = '' # per micromolar per millisecond (methionine binding rate)
+p = .05 #'' # units mup1 per millisecond (mup1 production rate)
+h = 1e-5 #'' # per micromolar per millisecond (methionine binding rate)
 w = 32 # unitless (scale factor for pH difference)
-j = '' # per millisecond (methionine unbinding rate)
-f = '' # per millisecond (recycling rate)
+j = 1e-5 #'' # per millisecond (methionine unbinding rate)
+f = .25 #'' # per millisecond (recycling rate)
 Ae = 47 # micrometers^3 (endosomal membrane surface area)
 Ap = 314 # micrometers^3 (plasma membrane surface area)
 u = 1 # per millisecond (ubiquitination rate)
-a = '' # per millisecond (art 1 binding rate)
-b = '' # per millisecond (deubiquitination rate)
-d = '' # per millisecond (degradation rate)
-n = '' # per millisecond (endocytosis rate)
+a = 1e-5 #'' # per micromolar per millisecond (art 1 binding rate)
+b = 1 # per millisecond (deubiquitination rate)
+d = .002 #'' # per millisecond (degradation rate)
+n = 0.1 #'' # per millisecond (endocytosis rate)
 V = 523 # micrometers^3 (volume of cytoplasm)
-vmax = '' # 
-Km = ''
+vmax = 8.8 #'' # micromolars*micrometers^3 per millisecond (maximal rate of methionine metabolism)
+Km = 2.5 #'' # micromolars (methionin michaelis-menten constant)
+
+# methionine (changes)
+Me = .1
+
+if __name__ == '__main__':
+    # establish initial conditions
+    initial = [50, 10, 1, 5, 4, 60, 30, 20, .1]
+    times = np.linspace(0, 20, 200)
+
+    # solve using solve_ivp
+    system = lambda t, y: model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km)
+    solution = solve_ivp(system, [times[0], times[-1]], initial, t_eval=times)
+
+    for i in range(9):
+        plt.plot(times, solution.y[i], label=f'y{i}(t) (solve_ivp)', linestyle='--')
+    #plt.plot(time_points, solution_solve_ivp.y[1], label='y2(t) (solve_ivp)', linestyle='--')
+    plt.xlabel('Time')
+    plt.ylabel('y(t)')
+    plt.title(f'Solution of the System of ODEs')
+    plt.legend()
+    plt.show()
