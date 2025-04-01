@@ -67,5 +67,5 @@ if __name__ == '__main__':
     plt.ylabel('y(t)')
     plt.ylim(-1, 100)
     plt.title(f'Solution of the System of ODEs')
-    plt.legend()
+    plt.legend(labels=['P', 'P_m', 'P_a', 'P_u', 'E', 'E_m', 'E_a', 'E_u', 'M'])
     plt.show()
