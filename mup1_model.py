@@ -53,19 +53,19 @@ Me = .1
 
 if __name__ == '__main__':
     # establish initial conditions
-    initial = [50, 10, 1, 5, 4, 60, 30, 20, .1]
-    times = np.linspace(0, 20, 200)
+    initial = [4e3, 0, 0, 0, 0, 0, 0, 0, 13]
+    times = np.linspace(0, 100, 200)
+    labels = ['P', 'Pm', 'Pa', 'Pu', 'E', 'Em', 'Ea', 'Eu', 'M']
 
     # solve using solve_ivp
     system = lambda t, y: model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km)
     solution = solve_ivp(system, [times[0], times[-1]], initial, t_eval=times)
 
     for i in range(8):
-        plt.plot(times, solution.y[i], label=f'y{i}(t) (solve_ivp)', linestyle='--')
+        plt.plot(times, solution.y[i], label=f'{labels[i]}(t) (solve_ivp)', linestyle='--')
     #plt.plot(time_points, solution_solve_ivp.y[1], label='y2(t) (solve_ivp)', linestyle='--')
     plt.xlabel('Time')
     plt.ylabel('y(t)')
-    plt.ylim(-1, 100)
     plt.title(f'Solution of the System of ODEs')
     plt.legend()
     plt.show()
