@@ -32,10 +32,10 @@ def model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km):
     return dy
 
 # parameters (filled in the ones I think would be the same or similar to Fur4)
-p = .05 #'' # units mup1 per millisecond (mup1 production rate)
-h = 1e-5 #'' # per micromolar per millisecond (methionine binding rate)
+p = 8.3e-5 #'' # units mup1 per millisecond (mup1 production rate)
+h = 135 #'' # per micromolar per millisecond (methionine binding rate)
 w = 32 # unitless (scale factor for pH difference)
-j = 1e-5 #'' # per millisecond (methionine unbinding rate)
+j = 100 #'' # per millisecond (methionine unbinding rate)
 f = .25 #'' # per millisecond (recycling rate)
 Ae = 47 # micrometers^3 (endosomal membrane surface area)
 Ap = 314 # micrometers^3 (plasma membrane surface area)
@@ -45,7 +45,7 @@ b = 1 # per millisecond (deubiquitination rate)
 d = .002 #'' # per millisecond (degradation rate)
 n = 0.1 #'' # per millisecond (endocytosis rate)
 V = 523 # micrometers^3 (volume of cytoplasm)
-vmax = 8.8 #'' # micromolars*micrometers^3 per millisecond (maximal rate of methionine metabolism)
+vmax = 8.8e3 #'' # micromolars*micrometers^3 per millisecond (maximal rate of methionine metabolism)
 Km = 2.5 #'' # micromolars (methionin michaelis-menten constant)
 
 # methionine (changes)
@@ -54,7 +54,7 @@ Me = .1
 if __name__ == '__main__':
     # establish initial conditions
     initial = [.1, .1, .1, .1, .1, .1, .1, .1, .1]
-    times = np.linspace(0, 100, 200)
+    times = np.linspace(0, 1000, 200)
     labels = ['P', 'Pm', 'Pa', 'Pu', 'E', 'Em', 'Ea', 'Eu', 'M']
 
     # solve using solve_ivp
