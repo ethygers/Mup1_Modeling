@@ -53,7 +53,7 @@ Me = .1
 
 if __name__ == '__main__':
     # establish initial conditions
-    initial = [4e3, 0, 0, 0, 0, 0, 0, 0, 13]
+    initial = [.1, .1, .1, .1, .1, .1, .1, .1, .1]
     times = np.linspace(0, 100, 200)
     labels = ['P', 'Pm', 'Pa', 'Pu', 'E', 'Em', 'Ea', 'Eu', 'M']
 
