@@ -22,10 +22,10 @@ def model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km):
         h*Me*P + (h/w)*M*P - j*Pm - a*Pm,                                 # Pm
         a*Pm - u*Pa,                                                      # Pa
         u*Pa - n*(Ap/Ae)*Pu - b*Pu,                                       # Pu
-        -f*(Ae/Ap)*E + b*Eu - (h/w)*E*M + j*Em + b*Pu,                    # E
+        -f*(Ae/Ap)*E + b*Eu - (h/w)*E*M + j*Em + n*(Ap/Ae)*Pu,                    # E
         (h/w)*E*M - a*Em - j*Em,                                          # Em
         a*Em - u*Ea,                                                      # Ea
-        n*(Ap/Ae)*Pu - b*Eu + u*Ea - d*Eu,                                # Eu
+        - b*Eu + u*Ea - d*Eu,                                # Eu
         -(h/w)*M*P - (h/w)*E*M + (j + u)*(Em + Pm) - vmax*M/(V*(Km + M))  # M
     ]
 
