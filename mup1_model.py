@@ -65,11 +65,31 @@ def sy_solve_LU():
     solution = sy.matrices.MatrixBase.LUsolve(M, b)
     return solution
 
-    
+def solve_except_Pa_Ua_M():
+    """Solve all except Pa, Ua, M using sympy"""
+    # set up sympy variables
+    t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km = sy.symbols("t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km")
+    P, Pm, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pm, Pa, Pu, M, E, Em, Ea, Eu")
+
+    # functions to solve  
+    dP = p - h*Me*P - (h/w)*M*P + j*Pm + f*(Ae/Ap)*E                       # P
+    dPm = h*Me*P + (h/w)*M*P - j*Pm - a*Pm                                 # Pm
+    dPa = a*Pm - u*Pa                                                      # Pa
+    dPu = u*Pa - n*(Ap/Ae)*Pu - b*Pu                                       # Pu
+    dE = -f*(Ae/Ap)*E + b*Eu - (h/w)*E*M + j*Em + n*(Ap/Ae)*Pu             # E
+    dEm = (h/w)*E*M - a*Em - j*Em                                          # Em
+    dEa = a*Em - u*Ea                                                      # Ea
+    dEu = - b*Eu + u*Ea - d*Eu                                             # Eu
+    # dM = -(h/w)*M*P - (h/w)*E*M + (j + u)*(Em + Pm) - vmax*M/(V*(Km + M))  # M 
+
+    eqs = [dP, dPm, dPu, dE, dEm, dEu]
+    vars = [P, Pm, Pu, E, Em, Eu]
+
+    return sy.solve(eqs, vars)   
 
 
 def substitution():
-    """Substitute results from previous function"""
+    """Substitute results from previous function. Full steady states (except M) computed in steady_states_simplification.ipynb"""
     # set up sympy variables
     t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km = sy.symbols("t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km")
     P, Pm, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pm, Pa, Pu, M, E, Em, Ea, Eu")
@@ -83,8 +103,42 @@ def substitution():
                      Pu: Ae*Pa*u/(Ae*b + Ap*n)}
     dPa = a*Pm - u*Pa
     dEa = a*Em - u*Ea 
-
     
+    # substitute
+    dPa = sy.simplify(dPa.subs(Pm, steady_states[Pm]))
+    dEa = sy.simplify(dEa.subs(Em, steady_states[Em]))
+
+    return sy.solve([dPa, dEa], [Pa, Ea])
+
+def M_substitution():
+    """Compute the substitution for dM so everything is in terms of M"""
+    # get symbols
+    t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km = sy.symbols("t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km")
+    P, Pm, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pm, Pa, Pu, M, E, Em, Ea, Eu")
+
+    # steady states computed previously
+    steady_states = {E: Ap**2*n*p*w*(a*b + a*d + b*j + d*j)/(Ae**2*a*b**2*f*w + Ae**2*a*b*d*f*w + Ae**2*b**2*f*j*w + Ae**2*b*d*f*j*w + Ae*Ap*M*a*b*d*h + Ap**2*M*a*d*h*n),
+                     Em: Ap**2*M*h*n*p*(b + d)/(Ae**2*a*b**2*f*w + Ae**2*a*b*d*f*w + Ae**2*b**2*f*j*w + Ae**2*b*d*f*j*w + Ae*Ap*M*a*b*d*h + Ap**2*M*a*d*h*n),
+                     Ea: (Ap**2*M*a*b*h*n*p + Ap**2*M*a*d*h*n*p)/(Ae**2*a*b**2*f*u*w + Ae**2*a*b*d*f*u*w + Ae**2*b**2*f*j*u*w + Ae**2*b*d*f*j*u*w + Ae*Ap*M*a*b*d*h*u + Ap**2*M*a*d*h*n*u), 
+                     Eu: Ap**2*M*a*h*n*p/(Ae**2*a*b**2*f*w + Ae**2*a*b*d*f*w + Ae**2*b**2*f*j*w + Ae**2*b*d*f*j*w + Ae*Ap*M*a*b*d*h + Ap**2*M*a*d*h*n),
+                     P: p*w*(a + j)*(Ae*b + Ap*n)*(Ae*a*b*f*w + Ae*a*d*f*w + Ae*b*f*j*w + Ae*d*f*j*w + Ap*M*a*d*h)/(a*h*(M + Me*w)*(Ae**2*a*b**2*f*w + Ae**2*a*b*d*f*w + Ae**2*b**2*f*j*w + Ae**2*b*d*f*j*w + Ae*Ap*M*a*b*d*h + Ap**2*M*a*d*h*n)),
+                     Pm: p*(Ae*b + Ap*n)*(Ae*a*b*f*w + Ae*a*d*f*w + Ae*b*f*j*w + Ae*d*f*j*w + Ap*M*a*d*h)/(a*(Ae**2*a*b**2*f*w + Ae**2*a*b*d*f*w + Ae**2*b**2*f*j*w + Ae**2*b*d*f*j*w + Ae*Ap*M*a*b*d*h + Ap**2*M*a*d*h*n)),
+                     Pa: (Ae**2*a*b**2*f*p*w + Ae**2*a*b*d*f*p*w + Ae**2*b**2*f*j*p*w + Ae**2*b*d*f*j*p*w + Ae*Ap*M*a*b*d*h*p + Ae*Ap*a*b*f*n*p*w + Ae*Ap*a*d*f*n*p*w + Ae*Ap*b*f*j*n*p*w + Ae*Ap*d*f*j*n*p*w + Ap**2*M*a*d*h*n*p)/(Ae**2*a*b**2*f*u*w + Ae**2*a*b*d*f*u*w + Ae**2*b**2*f*j*u*w + Ae**2*b*d*f*j*u*w + Ae*Ap*M*a*b*d*h*u + Ap**2*M*a*d*h*n*u),
+                     Pu: Ae*p*(Ae*a*b*f*w + Ae*a*d*f*w + Ae*b*f*j*w + Ae*d*f*j*w + Ap*M*a*d*h)/(Ae**2*a*b**2*f*w + Ae**2*a*b*d*f*w + Ae**2*b**2*f*j*w + Ae**2*b*d*f*j*w + Ae*Ap*M*a*b*d*h + Ap**2*M*a*d*h*n)}
+
+    # substitutions
+    dM = -(h/w)*M*P - (h/w)*E*M + (j + u)*(Em + Pm) - vmax*M/(V*(Km + M))
+    new_M1 = sy.simplify(dM.subs(P, steady_states[P]))
+    new_M2 = sy.simplify(new_M1.subs(Pm, steady_states[Pm]))
+    new_m3 = sy.simplify(new_M2.subs(Pa, steady_states[Pa]))
+    new_m4 = sy.simplify(new_m3.subs(Pu, steady_states[Pu]))
+    new_m5 = sy.simplify(new_m4.subs(E, steady_states[E]))
+    new_m6 = sy.simplify(new_m5.subs(Em, steady_states[Em]))
+    new_m7 = sy.simplify(new_m6.subs(Ea, steady_states[Ea]))
+    new_m8 = sy.simplify(new_m7.subs(Eu, steady_states[Eu]))
+
+    return new_m8
+
 
 
 # parameters (filled in the ones I think would be the same or similar to Fur4)
@@ -105,7 +159,46 @@ vmax = 8.8e3 #'' # micromolars*micrometers^3 per millisecond (maximal rate of me
 Km = 2.5 #'' # micromolars (methionin michaelis-menten constant)
 
 # methionine (changes)
-Me = .1
+#Me = .1
+
+M, Me = sy.symbols('M, Me')
+
+# Now solve for M
+def bisection_M(Me, dM=sy.lambdify(Me, (-Ap**2*M*V*a*h*n*p*(Km + M)*(M + Me*w)*(a*b + a*d + b*j + d*j) - M*V*p*(Km + M)*(a + j)*(Ae*b + Ap*n)*(Ae*a*b*f*w + Ae*a*d*f*w + Ae*b*f*j*w + Ae*d*f*j*w + Ap*M*a*d*h) 
+                        - M*a*vmax*(M + Me*w)*(Ae**2*a*b**2*f*w + Ae**2*a*b*d*f*w + Ae**2*b**2*f*j*w + Ae**2*b*d*f*j*w + Ae*Ap*M*a*b*d*h + Ap**2*M*a*d*h*n) 
+                        + V*p*(Km + M)*(M + Me*w)*(j + u)*(Ap**2*M*a*h*n*(b + d) + (Ae*b + Ap*n)*(Ae*a*b*f*w + Ae*a*d*f*w + Ae*b*f*j*w + Ae*d*f*j*w + Ap*M*a*d*h)))/(V*a*(Km + M)*(M + Me*w)*(Ae**2*a*b**2*f*w + Ae**2*a*b*d*f*w + Ae**2*b**2*f*j*w + Ae**2*b*d*f*j*w + Ae*Ap*M*a*b*d*h + Ap**2*M*a*d*h*n))), 
+                p=8.3e-5, h=135, w=32, j=100, f=.25, Ae=47, Ap=314, u=1,
+                a=1e-5, b=1, d=.002, n=0.1, V=523, vmax=8.8e3, Km=2.5, bounds=[0, 400], maxiter=10000):
+    """Solving for the steady state of M at a given methionine value Me
+        
+        Parameters:
+        - Me (float): amount of extracellular methionine
+        - dM (sympy lambda function): differential equation in terms of extracellular methionine input as independent variable
+        - parameters (floats, optional): set to the values we currently have, can be changed as needed
+        - bounds (list, optional): initial upper and lower bound for the bisection method"""
+    # save dM with substitutions for all other variables (computed in steady_states_simplification.ipynb)
+    dM = sy.simplify(dM(Me))
+    dM_eq = sy.lambdify(M, dM)
+
+    # assign variables for beginning, end, and midpoint
+    x0, x1 = bounds[0], bounds[1]
+
+    # use a loop to continue splitting the interval until you find 0
+    for i in range(maxiter):
+        # assign midpoint
+        xmid = (x0 + x1) / 2    # so that it updates every time
+
+        # check function at midpoint
+        if np.isclose(dM_eq(xmid), 0).all():
+            return xmid
+        elif (dM_eq(xmid) > 0):   # if greater than zero, it should replace the left endpoint
+            x0 = xmid
+        else:                  # if less than zero, it should replace right endpoint
+            x1 = xmid
+    
+    # raise runtime error if it doesn't converge
+    #raise RuntimeError(f"Failed to converge in {maxiter} steps")
+    return xmid
 
 t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km = sy.symbols("t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km")
 P, Pm, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pm, Pa, Pu, M, E, Em, Ea, Eu")
@@ -130,19 +223,15 @@ if __name__ == '__main__':
     # plt.legend(labels=['P', 'P_m', 'P_a', 'P_u', 'E', 'E_m', 'E_a', 'E_u', 'M'])
     # plt.show()
 
-    print(sy_solve_LU())
+    # print(solve_except_Pa_Ua_M())
 
-    # Lets do some simplifying
-    P = -(-Ae*f*(-j*(Ap*M**2*a*b*h**2*n*p/(Ae*w**2*(-b - Ap*n/Ae)*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))**2*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)*(M*a*b*h/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)) - b - d)) 
-                     - Ap*M*h*n*p/(Ae*w*(-b - Ap*n/Ae)*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))))/(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j) 
-                     - Ap*M*a*b*h*n*p/(Ae*w*(-b - Ap*n/Ae)*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)
-                      *(M*a*b*h/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)) - b - d)) 
-                      + Ap*n*p/(Ae*(-b - Ap*n/Ae)))/(Ap*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - p 
-                      + j*(-Ae*f*(-j*(Ap*M**2*a*b*h**2*n*p/(Ae*w**2*(-b - Ap*n/Ae)*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))**2*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)*(M*a*b*h/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)) - b - d)) 
-                                      - Ap*M*h*n*p/(Ae*w*(-b - Ap*n/Ae)*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))))/(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j) - Ap*M*a*b*h*n*p/(Ae*w*(-b - Ap*n/Ae)*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)*(M*a*b*h/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)) - b - d)) 
-                                  + Ap*n*p/(Ae*(-b - Ap*n/Ae)))/(Ap*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - p)/a)/(h*(M/w + Me))
-    Pm = -(-Ae*f*(-j*(Ap*M**2*a*b*h**2*n*p/(Ae*w**2*(-b - Ap*n/Ae)*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))**2*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)*(M*a*b*h/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)) - b - d)) 
-                      - Ap*M*h*n*p/(Ae*w*(-b - Ap*n/Ae)*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))))/(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j) 
-                      - Ap*M*a*b*h*n*p/(Ae*w*(-b - Ap*n/Ae)*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)*(M*a*b*h/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))*(-M*h*j/(w*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - a - j)) - b - d)) 
-                      + Ap*n*p/(Ae*(-b - Ap*n/Ae)))/(Ap*(-Ae*f/Ap - M*h/w - f*n/(-b - Ap*n/Ae))) - p)/a
-
+    ## use bisection method to plot intracellular methionine vs extracellular
+    M_func = lambda m: bisection_M(Me=m)
+    m_range = np.linspace(.001, .01, 100)
+    
+    # plot it
+    plt.plot(m_range, [M_func(m) for m in m_range])
+    plt.title("Intracellular Methionine vs Extracellular")
+    plt.xlabel("extracellular")
+    plt.ylabel("intracellular")
+    plt.show()
