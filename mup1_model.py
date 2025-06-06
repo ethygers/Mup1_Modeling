@@ -138,6 +138,53 @@ def bisection_M(m, dM=sy.lambdify(Me, (-Ap*M*p*(Km + M)*(M*a**2*d*h + M*a*d*h*j 
     raise RuntimeError(f"Failed to converge in {maxiter} steps")
     #return xmid
 
+def plot_mup1_and_me():
+    """Plot total Mup1 against extracellular methionine to track the impact of changes of extracellular methionine
+    on total Mup1. Also plot plasma membrane Mup1 and endosomal Mup1 separately against extracellular methionine."""
+
+    # set sympy variables for steady state keys and methionine
+    P, Pm, Pa, Pu, M, E, Em, Ea, Eu, Me = sy.symbols("P, Pm, Pa, Pu, M, E, Em, Ea, Eu, Me")
+
+    # store steady states
+    steady_states = {P : p*w*(M*a**2*d*h + M*a*d*h*j + a**2*b*f*w + a**2*d*f*w + 2*a*b*f*j*w + 2*a*d*f*j*w + b*f*j**2*w + d*f*j**2*w)/(M*a**2*d*h**2*(M + Me*w)),
+                     Pm : p*(M*a*d*h + a*b*f*w + a*d*f*w + b*f*j*w + d*f*j*w)/(M*a**2*d*h),
+                     Pa : p*(M*a*d*h + a*b*f*w + a*d*f*w + b*f*j*w + d*f*j*w)/(M*a*d*h*u),
+                     Pu : p*(M*a*d*h + a*b*f*w + a*d*f*w + b*f*j*w + d*f*j*w)/(M*a*d*h*n),
+                     E : Ap*p*w*(a*b + a*d + b*j + d*j)/(Ae*M*a*d*h),
+                     Em : Ap*p*(b + d)/(Ae*a*d),
+                     Ea : Ap*p*(b + d)/(Ae*d*u),
+                     Eu : Ap*p/(Ae*d)}    
+    
+    # create lambda functions for the steady states
+    M_func = lambda m: bisection_M(m)
+
+    P_func = sy.lambdify((Me, M), steady_states[P])  # plasma membrane
+    Pm_func = sy.lambdify((Me, M), steady_states[Pm])
+    Pa_func = sy.lambdify((Me, M), steady_states[Pa])
+    Pu_func = sy.lambdify((Me, M), steady_states[Pu])
+
+    E_func = sy.lambdify((Me, M), steady_states[E])  # endosome
+    Em_func = sy.lambdify((Me, M), steady_states[Em])
+    Ea_func = sy.lambdify((Me, M), steady_states[Ea])
+    Eu_func = sy.lambdify((Me, M), steady_states[Eu])
+
+    # get the plasma membrane, endosome, and overall totals
+    plasma_membrane = lambda m: P_func(m, M_func(m)) + Pm_func(m, M_func(m)) + Pa_func(m, M_func(m)) + Pu_func(m, M_func(m))
+    endosome = lambda m: E_func(m, M_func(m)) + Em_func(m, M_func(m)) + Ea_func(m, M_func(m)) + Eu_func(m, M_func(m))
+    total = lambda m: plasma_membrane(m) + endosome(m)
+
+    # now plot it
+    m_vals = np.linspace(10, 200, 100)
+    plt.plot(m_vals, [total(m) for m in m_vals], label="Total")
+    plt.plot(m_vals, [endosome(m) for m in m_vals], label="Endosome")
+    plt.plot(m_vals, [plasma_membrane(m) for m in m_vals], label="Plasma Membrane")
+    plt.title("Mup1 and Methionine")
+    plt.xlabel("Extracellular Methionine")
+    plt.ylabel("Mup1")
+    plt.legend()
+    plt.show()
+
+
 # t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km = sy.symbols("t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km")
 # P, Pm, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pm, Pa, Pu, M, E, Em, Ea, Eu")
 
@@ -145,23 +192,25 @@ def bisection_M(m, dM=sy.lambdify(Me, (-Ap*M*p*(Km + M)*(M*a**2*d*h + M*a*d*h*j 
 Me = .1
 
 if __name__ == '__main__':
-    # establish initial conditions
-    initial = [10, 10, 10, 10, 10, 10, 10, 10, 500]
-    times = np.linspace(0, 100, 200)
-    labels = ['P', 'Pm', 'Pa', 'Pu', 'E', 'Em', 'Ea', 'Eu', 'M']
+    plot_mup1_and_me()
 
-    # solve using solve_ivp
-    system = lambda t, y: model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km)
-    solution = solve_ivp(system, [times[0], times[-1]], initial, t_eval=times)
+    # # establish initial conditions
+    # initial = [10, 10, 10, 10, 10, 10, 10, 10, 500]
+    # times = np.linspace(0, 100, 200)
+    # labels = ['P', 'Pm', 'Pa', 'Pu', 'E', 'Em', 'Ea', 'Eu', 'M']
 
-    for i in range(8):
-        plt.plot(times, solution.y[i], label=f'{labels[i]}(t) (solve_ivp)', linestyle='--')
-    #plt.plot(time_points, solution_solve_ivp.y[1], label='y2(t) (solve_ivp)', linestyle='--')
-    plt.xlabel('Time')
-    plt.ylabel('y(t)')
-    plt.title(f'Solution of the System of ODEs')
-    plt.legend(labels=['P', 'P_m', 'P_a', 'P_u', 'E', 'E_m', 'E_a', 'E_u', 'M'])
-    plt.show()
+    # # solve using solve_ivp
+    # system = lambda t, y: model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km)
+    # solution = solve_ivp(system, [times[0], times[-1]], initial, t_eval=times)
+
+    # for i in range(8):
+    #     plt.plot(times, solution.y[i], label=f'{labels[i]}(t) (solve_ivp)', linestyle='--')
+    # #plt.plot(time_points, solution_solve_ivp.y[1], label='y2(t) (solve_ivp)', linestyle='--')
+    # plt.xlabel('Time')
+    # plt.ylabel('y(t)')
+    # plt.title(f'Solution of the System of ODEs')
+    # plt.legend(labels=['P', 'P_m', 'P_a', 'P_u', 'E', 'E_m', 'E_a', 'E_u', 'M'])
+    # plt.show()
 
     # ## use bisection method to plot intracellular methionine vs extracellular
     # M_func = lambda m: bisection_M(m)
