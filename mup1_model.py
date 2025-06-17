@@ -117,6 +117,7 @@ def bisection_M(m, dM=sy.lambdify(Me, (-Ap*M*p*(Km + M)*(M*a**2*d*h + M*a*d*h*j 
     # save dM with substitutions for all other variables (computed in steady_states_simplification.ipynb)
     dM = sy.simplify(dM(m))
     dM_eq = sy.lambdify(M, dM)
+    print(dM_eq(500))
 
     # assign variables for beginning, end, and midpoint
     x0, x1 = bounds[0], bounds[1]
@@ -174,7 +175,7 @@ def plot_mup1_and_me():
     total = lambda m: plasma_membrane(m) + endosome(m)
 
     # now plot it
-    m_vals = np.linspace(10, 200, 100)
+    m_vals = np.linspace(5, 20, 50)
     plt.plot(m_vals, [total(m) for m in m_vals], label="Total")
     plt.plot(m_vals, [endosome(m) for m in m_vals], label="Endosome")
     plt.plot(m_vals, [plasma_membrane(m) for m in m_vals], label="Plasma Membrane")
