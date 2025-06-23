@@ -74,7 +74,7 @@ def compute_steady_states():
     return steady_states, new_dM
 
 
-def bisection_method(Me, dM, params = [8.3e-5, 135, 32, 100, .25, 47, 314, 1, 1e-5, 1, .002, 0.1, 523, 8.8e3, 2.5, 1, 1],
+def bisection_method(Me, dM, params = [8.3e-5, 100 / 2188, 32, 100, .25, 47, 314, 1, 10, 1, .002, 0.1, 523, 174333.33, 350, 1, 1],
                      M=sy.symbols("M"), bounds=[0, 4000], maxiter=1000):
     """Solve for M using the bisection method.
     
@@ -92,13 +92,15 @@ def bisection_method(Me, dM, params = [8.3e-5, 135, 32, 100, .25, 47, 314, 1, 1e
     Solution to bisection method (zero of dM within the bounds)
     """
 
-    # unpack params for readability
-    p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2 = params
+    # get params for substitution
+    p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2 = sy.symbols("p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2")
+    symbols_list = [p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2]
+    param_dict = {symbols_list[i]: param for i, param in enumerate(params)}
 
     # save dM with substitutions for all other variables (computed in steady_states_simplification.ipynb)
     dM = sy.simplify(dM(Me))
-    dM_eq = sy.lambdify(M, dM)
-    print(dM_eq(500))
+    new_dM = dM.subs(param_dict)
+    dM_eq = sy.lambdify(M, new_dM)
 
     # assign variables for beginning, end, and midpoint
     x0, x1 = bounds[0], bounds[1]
