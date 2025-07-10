@@ -8,6 +8,7 @@ import pandas as pd
 from tqdm import tqdm
 import json
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 def run_single_sensitivity_analysis(param_values, problem, model_func, seed=None):
     """Run a single sensitivity analysis with given parameters.
@@ -197,7 +198,7 @@ def aggregate_results(results):
 #     # Save summary to CSV
 #     summary_df.to_csv(f'{output_dir}/summary.csv', index=False)
 
-def plot_results(aggregated, barsize=0.15, include_sigma=False, include_mu=False, output_dir='Images/sensitivity_analysis', label=''):
+def plot_results(aggregated, barsize=0.15, include_sigma=True, include_mu=False, output_dir='Images/sensitivity_analysis', label=''):
     """Create plots of the aggregated results.
     
     Parameters
@@ -242,7 +243,46 @@ def plot_results(aggregated, barsize=0.15, include_sigma=False, include_mu=False
     ax1.legend()
     
     plt.tight_layout()
-    plt.savefig(f'{output_dir}/sensitivity_plots{label}.png')
+    # plt.savefig(f'{output_dir}/sensitivity_plots{label}.png')
+    plt.show()
+
+def scatter_plot(results, aggregated=None, output_dir=None):
+    """Plot a scatter plot of the mu_star and sigma results from Morris sensitivity analysis (used morris to sample and analyze).
+    
+    Parameters
+    ----------
+    results: dict
+        dictionary of outputs from sensitivity analysis
+    aggregated: dict, optional
+        dictionary of aggregated results (from aggregate_results function)
+    output_dir: string, optional
+        location to save output"""
+    
+    # get the sigma and mu vals for each parameter
+    if aggregated:
+        mu_vals = aggregated["mu_star"]["mean"]
+        sigma_vals = aggregated["sigma"]["mean"]
+        labels = aggregated['parameter_names']
+    elif results:
+        mu_vals = results["sensitivity_indices"]["mu_star"]
+        sigma_vals = results["sensitivity_indices"]["sigma"]
+        labels = results['parameter_names']
+    else:
+        raise ValueError("Must provide results or aggregate dictionary.")
+
+    # create the scatter plot
+    plt.scatter(mu_vals, sigma_vals)
+    for i, label in enumerate(labels):   # label each point
+        plt.annotate(label, (mu_vals[i], sigma_vals[i]), (5, 5), textcoords='offset points',
+                     ha='left', va='bottom')
+    plt.title("Morris Sensitivity Analysis")
+    plt.xlabel("$\mu$")
+    plt.ylabel("$\sigma$")
+    plt.tight_layout()
+
+    # save and show
+    if output_dir:
+        plt.savefig(output_dir)
     plt.show()
 
 def mup1_model(t, y, parameters):
@@ -327,3 +367,6 @@ if __name__ == "__main__":
     
     # # Create plots
     # plot_results(aggregated) 
+
+
+    # take out parameters we know for sure and then compare it to Fur4 plot
