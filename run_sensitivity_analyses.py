@@ -285,32 +285,32 @@ def scatter_plot(results, aggregated=None, output_dir=None):
         plt.savefig(output_dir)
     plt.show()
 
-def mup1_model(t, y, parameters):
+def mup1_model(t, system, parameters):
     """Function coding the Mup1 trafficking model.
     
     Parameters
     ----------
-    y : array, list 
+    system : array, list 
         values of P, Pm, Pa, Pu, E, Em, Ea, Eu, M
     parameters: array, list
         values of parameters to run the system with
     """
 
-    P, Pm, Pa, Pu, E, Em, Ea, Eu, M = y 
-    p, w, j, kd, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, Me = parameters    # unpack for readability
-    h = j / kd
+    P, Pm, Pa, Pu, E, Em, Ea, Eu, M = system 
+    y, w, j, kd, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, Me = parameters    # unpack for readability
+    k = j / kd
 
     # define the differential equations
     dy = [
-        p - h*Me*P - (h/w)*M*P + j*Pm + f*(Ae/Ap)*E,                       # P
-        h*Me*P + (h/w)*M*P - j*Pm - a*Pm,                                  # Pm
-        a*Pm - u*Pa,                                                       # Pa
-        u*Pa - n*Pu,                                                       # Pu
-        n*(Ap/Ae)*Pu - f*E + b*Eu - (h/w)*E*M + j*Em,                      # E
-        (h/w)*E*M - a*Em - j*Em,                                           # Em
-        a*Em - u*Ea,                                                       # Ea
-        -b*Eu + u*Ea - d*Eu,                                               # Eu
-        -(h/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + u)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))  # M 
+        y - k*Me*P - (k/w)*M*P + j*Pm + f*(Ae/Ap)*E,                       # P
+        k*Me*P + (k/w)*M*P - j*Pm - h*Pm,                                  # Pm
+        h*Pm - a*Pa,                                                       # Pa
+        a*Pa - g*Pu,                                                       # Pu
+        g*(Ap/Ae)*Pu - f*E + b*Eu - (k/w)*E*M + j*Em,                      # E
+        (k/w)*E*M - h*Em - j*Em,                                           # Em
+        h*Em - a*Ea,                                                       # Ea
+        -b*Eu + a*Ea - z*Eu,                                               # Eu
+        -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))  # M 
         ]
 
     return dy
@@ -320,20 +320,20 @@ if __name__ == "__main__":
     # Define your problem
     problem = {
         'num_vars': 16,
-        'names': ['p', 'w', 'j', 'kd', 'f', 'Ae', 'Ap', 'u', 'a', 'b', 'd', 'n', 'V', 'vmax', 'Km', 'Me'],
-        'bounds': [[8.3e-6, 8.3e-4],      # p: Mup1 production rate – production rates can vary over orders of magnitude due to transcriptional and translational regulation, environmental cues, and promoter strength.
+        'names': ['y', 'w', 'j', 'kd', 'f', 'Ae', 'Ap', 'a', 'h', 'b', 'z', 'g', 'V', 'vmax', 'Km', 'Me'],
+        'bounds': [[8.3e-6, 8.3e-4],      # y: Mup1 production rate – production rates can vary over orders of magnitude due to transcriptional and translational regulation, environmental cues, and promoter strength.
                     [10, 100],            # w: pH scale factor – this is a unitless scaling factor, and while its exact biological interpretation may vary, a range of 1 order of magnitude allows for exploratory analysis without being too speculative.
                     [10, 1000],           # j: Methionine unbinding rate – binding and unbinding kinetics often vary by 1–2 orders of magnitude depending on temperature, affinity, and conformational state.
                     [1000, 90000],        # kd: Dissociation constant – dissociation constants vary widely across protein-ligand systems; range chosen to reflect affinities from high (1 μM) to low (90 μM) binding strength.
-                    # h is derived from j/kd, so it should not be varied independently – vary j and kd instead
+                    # k is derived from j/kd, so it should not be varied independently – vary j and kd instead
                     [0.025, 2.5],         # f: Recycling rate – endosomal recycling rates can vary depending on the type of cargo, regulatory proteins, and metabolic state; 1 order of magnitude captures plausible biological fluctuation.
                     [20, 100],            # Ae: Endosomal surface area – endosomal sizes (and hence surface areas) differ based on maturation stage and cell size; this range allows for ~5x variation while remaining realistic for yeast cells.
                     [100, 1000],          # Ap: Plasma membrane surface area – reflects variability in yeast cell size; 3–10 μm diameter cells yield surface areas within this range.
-                    [0.1, 10],            # u: Ubiquitination rate – enzymatic tagging rates are context-dependent, influenced by E3 ligase concentration and substrate type; range spans 2 orders of magnitude.
-                    [1, 100],             # a: Art1 binding rate – ART protein interactions with transporters can vary widely depending on substrate conformation and signaling state; large range allows for nonlinearity exploration.
+                    [0.1, 10],            # a: Ubiquitination rate – enzymatic tagging rates are context-dependent, influenced by E3 ligase concentration and substrate type; range spans 2 orders of magnitude.
+                    [1, 100],             # h: Art1 binding rate – ART protein interactions with transporters can vary widely depending on substrate conformation and signaling state; large range allows for nonlinearity exploration.
                     [0.1, 10],            # b: Deubiquitination rate – affected by availability of deubiquitinases and substrate accessibility; same logic as for ubiquitination rate.
-                    [0.0002, 0.02],       # d: Degradation rate – protein degradation is generally slow, but this range captures variation due to stress conditions, proteasome targeting, or trafficking dynamics.
-                    [0.01, 1],            # n: Endocytosis rate – strongly regulated and responsive to signaling, nutrient levels, and surface cargo density; up to 100-fold variability is plausible.
+                    [0.0002, 0.02],       # z: Degradation rate – protein degradation is generally slow, but this range captures variation due to stress conditions, proteasome targeting, or trafficking dynamics.
+                    [0.01, 1],            # g: Endocytosis rate – strongly regulated and responsive to signaling, nutrient levels, and surface cargo density; up to 100-fold variability is plausible.
                     [200, 1000],          # V: Cytoplasmic volume – yeast cells range from ~30 to ~100 fL; cytoplasmic volume varies with cell cycle stage and environmental conditions.
                     [1e4, 1e6],           # vmax: Max methionine metabolism rate – reflects possible differences in metabolic enzyme expression, post-translational regulation, and methionine flux capacity.
                     [50, 1000],           # Km: Michaelis constant – Km values commonly vary across enzymes and contexts; this range includes both high-affinity (low Km) and low-affinity (high Km) scenarios.

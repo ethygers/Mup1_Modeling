@@ -3,53 +3,52 @@ from matplotlib import pyplot as plt
 from scipy.integrate import solve_ivp
 import sympy as sy
 
-def eisosome_model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2):
-    """function to establish the system in the model
+def eisosome_model(states, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2):
+    """function to establish the system in the model with eisosome
     
-       Parameters:
-       - y (ndarray): array of dependent variables (P, Pe, Pm, Pa, Pu, E, Em, Ea, Eu, M)
-       - t (float): time
-       - others (float): parameters for the equations (will be given values as we find them)
+    Parameters:
+    - states (ndarray): array of dependent variables (P, Pe, Pm, Pa, Pu, E, Em, Ea, Eu, M)
+    - t (float): time
+    - params (float): parameters for the equations (will be given values as we find them)
 
-       Returns:
-       - array: vector of derivatives at time t
+    Returns:
+    - dy (ndarray): vector of derivatives at time t
     """
     # unpack the variables (for readability)
-    P, Pe, Pm, Pa, Pu, E, Em, Ea, Eu, M = y
+    P, Pe, Pm, Pa, Pu, E, Em, Ea, Eu, M = states
     
     # set up the equations
     dy = [
-        p - h*Me*P - (h/w)*M*P + j*Pm + f*(Ae/Ap)*E + k1*Pe - k2*P,        # P
+        y - k*Me*P - (k/w)*M*P + j*Pm + f*(Ae/Ap)*E + k1*Pe - k2*P,        # P
         k2*P - k1*Pe,                                                      # Pe
-        h*Me*P + (h/w)*M*P - j*Pm - a*Pm,                                  # Pm
-        a*Pm - u*Pa,                                                       # Pa
-        u*Pa - n*Pu,                                                       # Pu
-        n*(Ap/Ae)*Pu - f*E + b*Eu - (h/w)*E*M + j*Em,                      # E
-        (h/w)*E*M - a*Em - j*Em,                                           # Em
-        a*Em - u*Ea,                                                       # Ea
-        -b*Eu + u*Ea - d*Eu,                                               # Eu
-        -(h/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + u)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))  # M 
-        ]
-
+        k*Me*P + (k/w)*M*P - j*Pm - h*Pm,                                  # Pm
+        h*Pm - a*Pa,                                                       # Pa
+        a*Pa - g*Pu,                                                       # Pu
+        g*(Ap/Ae)*Pu - f*E + b*Eu - (k/w)*E*M + j*Em,                      # E
+        (k/w)*E*M - h*Em - j*Em,                                           # Em
+        h*Em - a*Ea,                                                       # Ea
+        -b*Eu + a*Ea - z*Eu,                                               # Eu
+        -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))  # M
+    ]
+    
     return dy
 
 def plot_model(Me, params = [8.3e-5, 100 / 2188, 32, 100, .25, 47, 314, 1, 10, 1, .002, 0.1, 523, 174333.33, 350, 1, 1]):
     """Use solve_ivp to plot the model.
     
     Parameters:
-     - Me (float) : amount of extracellular methionine
-     - params (list) : list of parameter values [p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2]"""
+    - Me (float) : extracellular methionine concentration
+    - params (list) : list of parameter values [y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2]"""
     
-    # unpack parameter list
-    p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2 = params
-
+    y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2 = params
+    
     # establish initial conditions
     initial = [10, 0, 10, 10, 10, 10, 10, 10, 10, 500]
     times = np.linspace(0, 60, 200)
     labels = ['P', 'Pe', 'Pm', 'Pa', 'Pu', 'E', 'Em', 'Ea', 'Eu', 'M']
 
     # solve using solve_ivp
-    system = lambda t, y: eisosome_model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2)
+    system = lambda t, states: eisosome_model(states, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2)
     solution = solve_ivp(system, [times[0], times[-1]], initial, t_eval=times)
 
     for i in range(9):
@@ -74,19 +73,19 @@ def compute_steady_states():
     
     # Define sympy variables
     P, Pe, Pm, Pa, Pu, E, Em, Ea, Eu, M = sy.symbols("P, Pe, Pm, Pa, Pu, E, Em, Ea, Eu, M")
-    Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2 = sy.symbols("Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2")
+    Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2 = sy.symbols("Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2")
 
     # Define differential equations
-    dP  = p - h*Me*P - (h/w)*M*P + j*Pm + f*(Ae/Ap)*E + k1*Pe - k2*P
+    dP  = y - k*Me*P - (k/w)*M*P + j*Pm + f*(Ae/Ap)*E + k1*Pe - k2*P
     dPe = k2*P - k1*Pe
-    dPm = h*Me*P + (h/w)*M*P - j*Pm - a*Pm
-    dPa = a*Pm - u*Pa
-    dPu = u*Pa - n*Pu
-    dE  = n*(Ap/Ae)*Pu - f*E + b*Eu - (h/w)*E*M + j*Em
-    dEm = (h/w)*E*M - a*Em - j*Em
-    dEa = a*Em - u*Ea
-    dEu = -b*Eu + u*Ea - d*Eu
-    dM  = -(h/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + u)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))
+    dPm = k*Me*P + (k/w)*M*P - j*Pm - h*Pm
+    dPa = h*Pm - a*Pa
+    dPu = a*Pa - g*Pu
+    dE  = g*(Ap/Ae)*Pu - f*E + b*Eu - (k/w)*E*M + j*Em
+    dEm = (k/w)*E*M - h*Em - j*Em
+    dEa = h*Em - a*Ea
+    dEu = -b*Eu + a*Ea - z*Eu
+    dM  = -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))
 
     # Make lists with equations and variables
     eqs = [dP, dPe, dPm, dPa, dPu, dE, dEm, dEa, dEu]
@@ -101,18 +100,18 @@ def compute_steady_states():
     return steady_states, new_dM
 
 ### GLOBAL VARIABLES ###
-p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2 = [8.3e-5, 100 / 2188, 32, 100, .25, 47, 314, 1, 10, 1, .002, 0.1, 523, 174333.33, 350, 1, 1]
+y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2 = [8.3e-5, 100 / 2188, 32, 100, .25, 47, 314, 1, 10, 1, .002, 0.1, 523, 174333.33, 350, 1, 1]
 M, Me = sy.symbols("M, Me")
-STEADY_STATES = {'E': (Ap*a*b*p*w + Ap*a*d*p*w + Ap*b*j*p*w + Ap*d*j*p*w)/(Ae*M*a*d*h), 
-                 'Ea': (Ap*b*p + Ap*d*p)/(Ae*d*u), 
-                 'Em': (Ap*b*p + Ap*d*p)/(Ae*a*d), 
-                 'Eu': Ap*p/(Ae*d), 
-                 'P': (M*a**2*d*h*p*w + M*a*d*h*j*p*w + a**2*b*f*p*w**2 + a**2*d*f*p*w**2 + 2*a*b*f*j*p*w**2 + 2*a*d*f*j*p*w**2 + b*f*j**2*p*w**2 + d*f*j**2*p*w**2)/(M**2*a**2*d*h**2 + M*Me*a**2*d*h**2*w), 
-                 'Pa': (M*a*d*h*p + a*b*f*p*w + a*d*f*p*w + b*f*j*p*w + d*f*j*p*w)/(M*a*d*h*u), 
-                 'Pe': (M*a**2*d*h*k2*p*w + M*a*d*h*j*k2*p*w + a**2*b*f*k2*p*w**2 + a**2*d*f*k2*p*w**2 + 2*a*b*f*j*k2*p*w**2 + 2*a*d*f*j*k2*p*w**2 + b*f*j**2*k2*p*w**2 + d*f*j**2*k2*p*w**2)/(M**2*a**2*d*h**2*k1 + M*Me*a**2*d*h**2*k1*w), 
-                 'Pm': (M*a*d*h*p + a*b*f*p*w + a*d*f*p*w + b*f*j*p*w + d*f*j*p*w)/(M*a**2*d*h), 
-                 'Pu': (M*a*d*h*p + a*b*f*p*w + a*d*f*p*w + b*f*j*p*w + d*f*j*p*w)/(M*a*d*h*n)}, 
-dM_EQ = -M*h*(Ap*(M*a**2*d*h*p*w + M*a*d*h*j*p*w + a**2*b*f*p*w**2 + a**2*d*f*p*w**2 + 2*a*b*f*j*p*w**2 + 2*a*d*f*j*p*w**2 + b*f*j**2*p*w**2 + d*f*j**2*p*w**2)/(V*(M**2*a**2*d*h**2 + M*Me*a**2*d*h**2*w)) + (Ap*a*b*p*w + Ap*a*d*p*w + Ap*b*j*p*w + Ap*d*j*p*w)/(M*V*a*d*h))/w - M*vmax/(V*(Km + M)) + (j + u)*(Ap*(M*a*d*h*p + a*b*f*p*w + a*d*f*p*w + b*f*j*p*w + d*f*j*p*w)/(M*V*a**2*d*h) + (Ap*b*p + Ap*d*p)/(V*a*d))
+STEADY_STATES = {'E': (Ap*h*b*y*w + Ap*h*z*y*w + Ap*b*j*y*w + Ap*z*j*y*w)/(Ae*M*h*z*k), 
+                 'Ea': (Ap*b*y + Ap*z*y)/(Ae*z*a), 
+                 'Em': (Ap*b*y + Ap*z*y)/(Ae*h*z), 
+                 'Eu': Ap*y/(Ae*z), 
+                 'P': (M*h**2*z*k*y*w + M*h*z*k*j*y*w + h**2*b*f*y*w**2 + h**2*z*f*y*w**2 + 2*h*b*f*j*y*w**2 + 2*h*z*f*j*y*w**2 + b*f*j**2*y*w**2 + z*f*j**2*y*w**2)/(M**2*h**2*z*k**2 + M*Me*h**2*z*k**2*w), 
+                 'Pa': (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h*z*k*a), 
+                 'Pe': (M*h**2*z*k*k2*y*w + M*h*z*k*j*k2*y*w + h**2*b*f*k2*y*w**2 + h**2*z*f*k2*y*w**2 + 2*h*b*f*j*k2*y*w**2 + 2*h*z*f*j*k2*y*w**2 + b*f*j**2*k2*y*w**2 + z*f*j**2*k2*y*w**2)/(M**2*h**2*z*k**2*k1 + M*Me*h**2*z*k**2*k1*w), 
+                 'Pm': (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h**2*z*k), 
+                 'Pu': (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h*z*k*g)}
+dM_EQ = -M*k*(Ap*(M*h**2*z*k*y*w + M*h*z*k*j*y*w + h**2*b*f*y*w**2 + h**2*z*f*y*w**2 + 2*h*b*f*j*y*w**2 + 2*h*z*f*j*y*w**2 + b*f*j**2*y*w**2 + z*f*j**2*y*w**2)/(V*(M**2*h**2*z*k**2 + M*Me*h**2*z*k**2*w)) + (Ap*h*b*y*w + Ap*h*z*y*w + Ap*b*j*y*w + Ap*z*j*y*w)/(M*V*h*z*k))/w - M*vmax/(V*(Km + M)) + (j + a)*(Ap*(M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*V*h**2*z*k) + (Ap*b*y + Ap*z*y)/(V*h*z))
 
 def bisection_method(Me, dM, params = [8.3e-5, 100 / 2188, 32, 100, .25, 47, 314, 1, 10, 1, .002, 0.1, 523, 174333.33, 350, 1, 1],
                      M=sy.symbols("M"), bounds=[0, 4000], maxiter=1000):
@@ -122,7 +121,7 @@ def bisection_method(Me, dM, params = [8.3e-5, 100 / 2188, 32, 100, .25, 47, 314
     ----------
     Me (float) : Extracellular methionine
     dM (function) : new_dM computed using compute_steady_states (still with sympy variables)
-    params (list) : Parameter values in order [p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2]
+    params (list) : Parameter values in order [y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2]
     M (sympy var) : Sympy symbol for M
     bounds (list) : List with start and end bounds for bisection method
     maxiter (int) : Stopping criteria
@@ -133,8 +132,8 @@ def bisection_method(Me, dM, params = [8.3e-5, 100 / 2188, 32, 100, .25, 47, 314
     """
 
     # get params for substitution
-    p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2 = sy.symbols("p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2")
-    symbols_list = [p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2]
+    y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2 = sy.symbols("y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2")
+    symbols_list = [y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2]
     param_dict = {symbols_list[i]: param for i, param in enumerate(params)}
 
     # save dM with substitutions for all other variables (computed in steady_states_simplification.ipynb)
@@ -201,21 +200,21 @@ def mup1_methionine_plot(parameters=[8.3e-5, 100 / 2188, 32, 100, .25, 47, 314, 
     """Code to plot total amount of Mup1 against amount of extracellular methionine."""
     # get Me values for plotting
     Me_vals = np.linspace(1, 50, 100)
-    p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km, k1, k2 = parameters
+    y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2 = parameters
 
     # Define steady state equations and methionine equation
     M, Me = sy.symbols("M, Me")
-    dM = -M*h*(Ap*(M*a**2*d*h*p*w + M*a*d*h*j*p*w + a**2*b*f*p*w**2 + a**2*d*f*p*w**2 + 2*a*b*f*j*p*w**2 + 2*a*d*f*j*p*w**2 + b*f*j**2*p*w**2 + d*f*j**2*p*w**2)/(V*(M**2*a**2*d*h**2 + M*Me*a**2*d*h**2*w)) + (Ap*a*b*p*w + Ap*a*d*p*w + Ap*b*j*p*w + Ap*d*j*p*w)/(M*V*a*d*h))/w - M*vmax/(V*(Km + M)) + (j + u)*(Ap*(M*a*d*h*p + a*b*f*p*w + a*d*f*p*w + b*f*j*p*w + d*f*j*p*w)/(M*V*a**2*d*h) + (Ap*b*p + Ap*d*p)/(V*a*d))
+    dM = -M*k*(Ap*(M*h**2*z*k*y*w + M*h*z*k*j*y*w + h**2*b*f*y*w**2 + h**2*z*f*y*w**2 + 2*h*b*f*j*y*w**2 + 2*h*z*f*j*y*w**2 + b*f*j**2*y*w**2 + z*f*j**2*y*w**2)/(V*(M**2*h**2*z*k**2 + M*Me*h**2*z*k**2*w)) + (Ap*h*b*y*w + Ap*h*z*y*w + Ap*b*j*y*w + Ap*z*j*y*w)/(M*V*h*z*k))/w - M*vmax/(V*(Km + M)) + (j + a)*(Ap*(M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*V*h**2*z*k) + (Ap*b*y + Ap*z*y)/(V*h*z))
     dM_eq = sy.lambdify(Me, dM)
-    steady_states = {"E": (Ap*a*b*p*w + Ap*a*d*p*w + Ap*b*j*p*w + Ap*d*j*p*w)/(Ae*M*a*d*h), 
-                     "Ea": (Ap*b*p + Ap*d*p)/(Ae*d*u), 
-                     "Em": (Ap*b*p + Ap*d*p)/(Ae*a*d), 
-                     "Eu": Ap*p/(Ae*d), 
-                     "P": (M*a**2*d*h*p*w + M*a*d*h*j*p*w + a**2*b*f*p*w**2 + a**2*d*f*p*w**2 + 2*a*b*f*j*p*w**2 + 2*a*d*f*j*p*w**2 + b*f*j**2*p*w**2 + d*f*j**2*p*w**2)/(M**2*a**2*d*h**2 + M*Me*a**2*d*h**2*w), 
-                     "Pa": (M*a*d*h*p + a*b*f*p*w + a*d*f*p*w + b*f*j*p*w + d*f*j*p*w)/(M*a*d*h*u), 
-                     "Pe": (M*a**2*d*h*k2*p*w + M*a*d*h*j*k2*p*w + a**2*b*f*k2*p*w**2 + a**2*d*f*k2*p*w**2 + 2*a*b*f*j*k2*p*w**2 + 2*a*d*f*j*k2*p*w**2 + b*f*j**2*k2*p*w**2 + d*f*j**2*k2*p*w**2)/(M**2*a**2*d*h**2*k1 + M*Me*a**2*d*h**2*k1*w), 
-                     "Pm": (M*a*d*h*p + a*b*f*p*w + a*d*f*p*w + b*f*j*p*w + d*f*j*p*w)/(M*a**2*d*h), 
-                     "Pu": (M*a*d*h*p + a*b*f*p*w + a*d*f*p*w + b*f*j*p*w + d*f*j*p*w)/(M*a*d*h*n)}
+    steady_states = {"E": (Ap*h*b*y*w + Ap*h*z*y*w + Ap*b*j*y*w + Ap*z*j*y*w)/(Ae*M*h*z*k), 
+                     "Ea": (Ap*b*y + Ap*z*y)/(Ae*z*a), 
+                     "Em": (Ap*b*y + Ap*z*y)/(Ae*h*z), 
+                     "Eu": Ap*y/(Ae*z), 
+                     "P": (M*h**2*z*k*y*w + M*h*z*k*j*y*w + h**2*b*f*y*w**2 + h**2*z*f*y*w**2 + 2*h*b*f*j*y*w**2 + 2*h*z*f*j*y*w**2 + b*f*j**2*y*w**2 + z*f*j**2*y*w**2)/(M**2*h**2*z*k**2 + M*Me*h**2*z*k**2*w), 
+                     "Pa": (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h*z*k*a), 
+                     "Pe": (M*h**2*z*k*k2*y*w + M*h*z*k*j*k2*y*w + h**2*b*f*k2*y*w**2 + h**2*z*f*k2*y*w**2 + 2*h*b*f*j*k2*y*w**2 + 2*a*z*f*j*k2*y*w**2 + b*f*j**2*k2*y*w**2 + z*f*j**2*k2*y*w**2)/(M**2*h**2*z*k**2*k1 + M*Me*h**2*z*k**2*k1*w), 
+                     "Pm": (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h**2*z*k), 
+                     "Pu": (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h*z*k*g)}
     
     # Set up equations for plotting
     PM_eq = sy.lambdify([M, Me], steady_states['P'] + steady_states['Pa'] + steady_states['Pm'] + steady_states['Pu'])

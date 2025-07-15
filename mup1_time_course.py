@@ -11,7 +11,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.integrate import solve_ivp
 
-def model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km):
+def model(states, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km):
     """function to establish the system in the model
 
        Parameters:
@@ -23,36 +23,36 @@ def model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km):
        - array: vector of derivatives at time t
     """
     # unpack the variables (for readability)
-    P, Pm, Pa, Pu, E, Em, Ea, Eu, M = y
+    P, Pm, Pa, Pu, E, Em, Ea, Eu, M = states
 
     # set up the equations
     dy = [
-        p - h*Me*P - (h/w)*M*P + j*Pm + f*(Ae/Ap)*E,                      # P
-        h*Me*P + (h/w)*M*P - j*Pm - a*Pm,                                 # Pm
-        a*Pm - u*Pa,                                                      # Pa
-        u*Pa - n*(Ap/Ae)*Pu - b*Pu,                                       # Pu
-        n*(Ap/Ae)*Pu - f*(Ae/Ap)*E + b*Eu - (h/w)*E*M + j*Em,             # E
-        (h/w)*E*M - a*Em - j*Em,                                          # Em
-        a*Em - u*Ea,                                                      # Ea
-        - b*Eu + u*Ea - d*Eu,                                             # Eu
-        -(h/w)*M*(E+P) + (j + u)*(Em + Pm) - (vmax*M)/(V*(Km + M))        # M
+        y - k*Me*P - (k/w)*M*P + j*Pm + f*(Ae/Ap)*E,                      # P
+        k*Me*P + (k/w)*M*P - j*Pm - h*Pm,                                 # Pm
+        h*Pm - a*Pa,                                                      # Pa
+        a*Pa - g*(Ap/Ae)*Pu - b*Pu,                                       # Pu
+        b*(Ap/Ae)*Pu - f*(Ae/Ap)*E + b*Eu - (k/w)*E*M + j*Em,             # E
+        (k/w)*E*M - h*Em - j*Em,                                          # Em
+        h*Em - a*Ea,                                                      # Ea
+        - b*Eu + a*Ea - z*Eu,                                             # Eu
+        -(k/w)*M*(E+P) + (j + a)*(Em + Pm) - (vmax*M)/(V*(Km + M))        # M
     ]
 
     return dy
 
 # parameters (filled in the ones I think would be the same or similar to Fur4)
-p = 8.3e-5 #'' # units mup1 per millisecond (mup1 production rate)
-h = 135 #'' # per micromolar per millisecond (methionine binding rate)
+y = 8.3e-5 #'' # units mup1 per millisecond (mup1 production rate)
+k = 135 #'' # per micromolar per millisecond (methionine binding rate)
 w = 32 # unitless (scale factor for pH difference)
 j = 100 #'' # per millisecond (methionine unbinding rate)
 f = .25 #'' # per millisecond (recycling rate)
 Ae = 47 # micrometers^3 (endosomal membrane surface area)
 Ap = 314 # micrometers^3 (plasma membrane surface area)
-u = 1 # per millisecond (ubiquitination rate)
-a = 135 #'' # per micromolar per millisecond (art 1 binding rate)
+a = 1 # per millisecond (ubiquitination rate)
+h = 135 #'' # per micromolar per millisecond (art 1 binding rate)
 b = 1 # per millisecond (deubiquitination rate)
-d = .002 #'' # per millisecond (degradation rate)
-n = 0.1 #'' # per millisecond (endocytosis rate)
+z = .002 #'' # per millisecond (degradation rate)
+g = 0.1 #'' # per millisecond (endocytosis rate)
 V = 523 # micrometers^3 (volume of cytoplasm)
 vmax = 8.8e3 #'' # micromolars*micrometers^3 per millisecond (maximal rate of methionine metabolism)
 Km = 2.5 #'' # micromolars (methionine michaelis-menten constant)
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     times = np.linspace(0, range, 200)
 
     # solve using solve_ivp
-    system = lambda t, y: model(y, t, Me, p, h, w, j, f, Ae, Ap, u, a, b, d, n, V, vmax, Km)
+    system = lambda t, states: model(states, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km)
     solution = solve_ivp(system, [times[0], times[-1]], initial, t_eval=times)
 
     P, P_m, P_a, P_u, E, E_m, E_a, E_u, M = solution.y
