@@ -15,7 +15,7 @@ def model(states, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km):
     """function to establish the system in the model
 
        Parameters:
-       - y (ndarray): array of dependent variables (P, Pm, Pa, Pu, E, Em, Ea, Eu, M)
+       - y (ndarray): array of dependent variables (P, Pb, Pa, Pu, E, Em, Ea, Eu, M)
        - t (float): time
        - others (float): parameters for the equations (will be given values as we find them)
 
@@ -23,19 +23,19 @@ def model(states, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km):
        - array: vector of derivatives at time t
     """
     # unpack the variables (for readability)
-    P, Pm, Pa, Pu, E, Em, Ea, Eu, M = states
+    P, Pb, Pa, Pu, E, Em, Ea, Eu, M = states
 
     # set up the equations
     dy = [
-        y - k*Me*P - (k/w)*M*P + j*Pm + f*(Ae/Ap)*E,                      # P
-        k*Me*P + (k/w)*M*P - j*Pm - h*Pm,                                 # Pm
-        h*Pm - a*Pa,                                                      # Pa
+        y - k*Me*P - (k/w)*M*P + j*Pb + f*(Ae/Ap)*E,                      # P
+        k*Me*P + (k/w)*M*P - j*Pb - h*Pb,                                 # Pb
+        h*Pb - a*Pa,                                                      # Pa
         a*Pa - g*(Ap/Ae)*Pu - b*Pu,                                       # Pu
         b*(Ap/Ae)*Pu - f*(Ae/Ap)*E + b*Eu - (k/w)*E*M + j*Em,             # E
         (k/w)*E*M - h*Em - j*Em,                                          # Em
         h*Em - a*Ea,                                                      # Ea
         - b*Eu + a*Ea - z*Eu,                                             # Eu
-        -(k/w)*M*(E+P) + (j + a)*(Em + Pm) - (vmax*M)/(V*(Km + M))        # M
+        -(k/w)*M*(E+P) + (j + a)*(Em + Pb) - (vmax*M)/(V*(Km + M))        # M
     ]
 
     return dy
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     P, P_m, P_a, P_u, E, E_m, E_a, E_u, M = solution.y
 
     plt.plot(times, P, label = 'P', color = 'b')
-    plt.plot(times, P_m, label = 'Pm')
+    plt.plot(times, P_m, label = 'Pb')
     plt.plot(times, P_a, label = 'Pa')
     plt.plot(times, P_u, label = 'Pu')
     plt.plot(times, E, label = 'E', color = 'r')

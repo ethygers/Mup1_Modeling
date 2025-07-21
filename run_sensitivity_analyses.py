@@ -295,26 +295,26 @@ def mup1_model(t, system, parameters):
     Parameters
     ----------
     system : array, list 
-        values of P, Pm, Pa, Pu, E, Em, Ea, Eu, M
+        values of P, Pb, Pa, Pu, E, Em, Ea, Eu, M
     parameters: array, list
         values of parameters to run the system with
     """
 
-    P, Pm, Pa, Pu, E, Em, Ea, Eu, M = system 
+    P, Pb, Pa, Pu, E, Em, Ea, Eu, M = system 
     y, w, j, kd, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, Me = parameters    # unpack for readability
     k = j / kd
 
     # define the differential equations
     dy = [
-        y - k*Me*P - (k/w)*M*P + j*Pm + f*(Ae/Ap)*E,                       # P
-        k*Me*P + (k/w)*M*P - j*Pm - h*Pm,                                  # Pm
-        h*Pm - a*Pa,                                                       # Pa
+        y - k*Me*P - (k/w)*M*P + j*Pb + f*(Ae/Ap)*E,                       # P
+        k*Me*P + (k/w)*M*P - j*Pb - h*Pb,                                  # Pb
+        h*Pb - a*Pa,                                                       # Pa
         a*Pa - g*Pu,                                                       # Pu
         g*(Ap/Ae)*Pu - f*E + b*Eu - (k/w)*E*M + j*Em,                      # E
         (k/w)*E*M - h*Em - j*Em,                                           # Em
         h*Em - a*Ea,                                                       # Ea
         -b*Eu + a*Ea - z*Eu,                                               # Eu
-        -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))  # M 
+        -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pb) - vmax*M/(V*(Km + M))  # M 
         ]
 
     return dy

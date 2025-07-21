@@ -7,7 +7,7 @@ def model(state, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km):
     """function to establish the system in the model
     
        Parameters:
-       - state (ndarray): array of dependent variables (P, Pm, Pa, Pu, E, Em, Ea, Eu, M)
+       - state (ndarray): array of dependent variables (P, Pb, Pa, Pu, E, Em, Ea, Eu, M)
        - t (float): time
        - others (float): parameters for the equations (will be given values as we find them)
 
@@ -15,19 +15,19 @@ def model(state, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km):
        - array: vector of derivatives at time t
     """
     # unpack the variables (for readability)
-    P, Pm, Pa, Pu, E, Em, Ea, Eu, M = state
+    P, Pb, Pa, Pu, E, Em, Ea, Eu, M = state
     
     # set up the equations
     dy = [
-        y - k*Me*P - (k/w)*M*P + j*Pm + f*(Ae/Ap)*E,                       # P
-        k*Me*P + (k/w)*M*P - j*Pm - h*Pm,                                 # Pm
-        h*Pm - a*Pa,                                                      # Pa
+        y - k*Me*P - (k/w)*M*P + j*Pb + f*(Ae/Ap)*E,                       # P
+        k*Me*P + (k/w)*M*P - j*Pb - h*Pb,                                 # Pb
+        h*Pb - a*Pa,                                                      # Pa
         a*Pa - g*Pu,                                                      # Pu
         g*(Ap/Ae)*Pu - f*E + b*Eu - (k/w)*E*M + j*Em,                      # E
         (k/w)*E*M - h*Em - j*Em,                                          # Em
         h*Em - a*Ea,                                                      # Ea
         -b*Eu + a*Ea - z*Eu,                                             # Eu
-        -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))  # M 
+        -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pb) - vmax*M/(V*(Km + M))  # M 
         ]
 
     return dy
@@ -37,21 +37,21 @@ def solve():
     """Solve for steady states using sympy"""
     # set up sympy variables
     t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km = sy.symbols("t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km")
-    P, Pm, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pm, Pa, Pu, M, E, Em, Ea, Eu")
+    P, Pb, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pb, Pa, Pu, M, E, Em, Ea, Eu")
 
     # functions to solve  
-    dP = y - k*Me*P - (k/w)*M*P + j*Pm + f*(Ae/Ap)*E                       # P
-    dPm = k*Me*P + (k/w)*M*P - j*Pm - h*Pm                                 # Pm
-    dPa = h*Pm - a*Pa                                                      # Pa
+    dP = y - k*Me*P - (k/w)*M*P + j*Pb + f*(Ae/Ap)*E                       # P
+    dPb = k*Me*P + (k/w)*M*P - j*Pb - h*Pb                                 # Pb
+    dPa = h*Pb - a*Pa                                                      # Pa
     dPu = a*Pa - g*Pu                                                      # Pu
     dE = g*(Ap/Ae)*Pu - f*E + b*Eu - (k/w)*E*M + j*Em                      # E
     dEm = (k/w)*E*M - h*Em - j*Em                                          # Em
     dEa = h*Em - a*Ea                                                      # Ea
     dEu = - b*Eu + a*Ea - z*Eu                                             # Eu
-    dM = -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))  # M 
+    dM = -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pb) - vmax*M/(V*(Km + M))  # M 
 
-    eqs = [dP, dPm, dPa, dPu, dE, dEm, dEa, dEu]
-    vars = [P, Pm, Pa, Pu, E, Em, Ea, Eu]
+    eqs = [dP, dPb, dPa, dPu, dE, dEm, dEa, dEu]
+    vars = [P, Pb, Pa, Pu, E, Em, Ea, Eu]
 
     return sy.solve(eqs, vars)   
 
@@ -60,11 +60,11 @@ def M_substitution():
     """Compute the substitution for dM so everything is in terms of M"""
     # get symbols
     t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km = sy.symbols("t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km")
-    P, Pm, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pm, Pa, Pu, M, E, Em, Ea, Eu")
+    P, Pb, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pb, Pa, Pu, M, E, Em, Ea, Eu")
 
     # steady states computed previously
     steady_states = {P : y*w*(M*h**2*z*k + M*h*z*k*j + h**2*b*f*w + h**2*z*f*w + 2*h*b*f*j*w + 2*h*z*f*j*w + b*f*j**2*w + z*f*j**2*w)/(M*h**2*z*k**2*(M + Me*w)),
-                     Pm : y*(M*h*z*k + h*b*f*w + h*z*f*w + b*f*j*w + z*f*j*w)/(M*h**2*z*k),
+                     Pb : y*(M*h*z*k + h*b*f*w + h*z*f*w + b*f*j*w + z*f*j*w)/(M*h**2*z*k),
                      Pa : y*(M*h*z*k + h*b*f*w + h*z*f*w + b*f*j*w + z*f*j*w)/(M*h*z*k*a),
                      Pu : y*(M*h*z*k + h*b*f*w + h*z*f*w + b*f*j*w + z*f*j*w)/(M*h*z*k*g),
                      E : Ap*y*w*(h*b + h*z + b*j + z*j)/(Ae*M*h*z*k),
@@ -73,7 +73,7 @@ def M_substitution():
                      Eu : Ap*y/(Ae*z)}
 
     # substitutions
-    dM = -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))  # M 
+    dM = -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pb) - vmax*M/(V*(Km + M))  # M 
     new_dM = dM.subs(steady_states)
 
     return new_dM
@@ -144,11 +144,11 @@ def plot_mup1_and_me():
     on total Mup1. Also plot plasma membrane Mup1 and endosomal Mup1 separately against extracellular methionine."""
 
     # set sympy variables for steady state keys and methionine
-    P, Pm, Pa, Pu, M, E, Em, Ea, Eu, Me = sy.symbols("P, Pm, Pa, Pu, M, E, Em, Ea, Eu, Me")
+    P, Pb, Pa, Pu, M, E, Em, Ea, Eu, Me = sy.symbols("P, Pb, Pa, Pu, M, E, Em, Ea, Eu, Me")
 
     # store steady states
     steady_states = {P : y*w*(M*h**2*z*k + M*h*z*k*j + h**2*b*f*w + h**2*z*f*w + 2*h*b*f*j*w + 2*h*z*f*j*w + b*f*j**2*w + z*f*j**2*w)/(M*h**2*z*k**2*(M + Me*w)),
-                     Pm : y*(M*h*z*k + h*b*f*w + h*z*f*w + b*f*j*w + z*f*j*w)/(M*h**2*z*k),
+                     Pb : y*(M*h*z*k + h*b*f*w + h*z*f*w + b*f*j*w + z*f*j*w)/(M*h**2*z*k),
                      Pa : y*(M*h*z*k + h*b*f*w + h*z*f*w + b*f*j*w + z*f*j*w)/(M*h*z*k*a),
                      Pu : y*(M*h*z*k + h*b*f*w + h*z*f*w + b*f*j*w + z*f*j*w)/(M*h*z*k*g),
                      E : Ap*y*w*(h*b + h*z + b*j + z*j)/(Ae*M*h*z*k),
@@ -160,7 +160,7 @@ def plot_mup1_and_me():
     M_func = lambda m: bisection_M(m)
 
     P_func = sy.lambdify((Me, M), steady_states[P])  # plasma membrane
-    Pm_func = sy.lambdify((Me, M), steady_states[Pm])
+    Pb_func = sy.lambdify((Me, M), steady_states[Pb])
     Pa_func = sy.lambdify((Me, M), steady_states[Pa])
     Pu_func = sy.lambdify((Me, M), steady_states[Pu])
 
@@ -170,7 +170,7 @@ def plot_mup1_and_me():
     Eu_func = sy.lambdify((Me, M), steady_states[Eu])
 
     # get the plasma membrane, endosome, and overall totals
-    plasma_membrane = lambda m: P_func(m, M_func(m)) + Pm_func(m, M_func(m)) + Pa_func(m, M_func(m)) + Pu_func(m, M_func(m))
+    plasma_membrane = lambda m: P_func(m, M_func(m)) + Pb_func(m, M_func(m)) + Pa_func(m, M_func(m)) + Pu_func(m, M_func(m))
     endosome = lambda m: E_func(m, M_func(m)) + Em_func(m, M_func(m)) + Ea_func(m, M_func(m)) + Eu_func(m, M_func(m))
     total = lambda m: plasma_membrane(m) + endosome(m)
 
@@ -187,7 +187,7 @@ def plot_mup1_and_me():
 
 
 # t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km = sy.symbols("t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km")
-# P, Pm, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pm, Pa, Pu, M, E, Em, Ea, Eu")
+# P, Pb, Pa, Pu, M, E, Em, Ea, Eu = sy.symbols("P, Pb, Pa, Pu, M, E, Em, Ea, Eu")
 
 # methionine (changes)
 Me = .1
@@ -198,7 +198,7 @@ if __name__ == '__main__':
     # # establish initial conditions
     # initial = [10, 10, 10, 10, 10, 10, 10, 10, 500]
     # times = np.linspace(0, 100, 200)
-    # labels = ['P', 'Pm', 'Pa', 'Pu', 'E', 'Em', 'Ea', 'Eu', 'M']
+    # labels = ['P', 'Pb', 'Pa', 'Pu', 'E', 'Em', 'Ea', 'Eu', 'M']
 
     # # solve using solve_ivp
     # system = lambda t, y: model(y, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km)

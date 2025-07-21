@@ -7,7 +7,7 @@ def eisosome_model(states, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax,
     """function to establish the system in the model with eisosome
     
     Parameters:
-    - states (ndarray): array of dependent variables (P, Pe, Pm, Pa, Pu, E, Em, Ea, Eu, M)
+    - states (ndarray): array of dependent variables (P, Pe, Pb, Pa, Pu, E, Em, Ea, Eu, M)
     - t (float): time
     - params (float): parameters for the equations (will be given values as we find them)
 
@@ -15,20 +15,20 @@ def eisosome_model(states, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax,
     - dy (ndarray): vector of derivatives at time t
     """
     # unpack the variables (for readability)
-    P, Pe, Pm, Pa, Pu, E, Em, Ea, Eu, M = states
+    P, Pe, Pb, Pa, Pu, E, Em, Ea, Eu, M = states
     
     # set up the equations
     dy = [
-        y - k*Me*P - (k/w)*M*P + j*Pm + f*(Ae/Ap)*E + k1*Pe - k2*P,        # P
+        y - k*Me*P - (k/w)*M*P + j*Pb + f*(Ae/Ap)*E + k1*Pe - k2*P,        # P
         k2*P - k1*Pe,                                                      # Pe
-        k*Me*P + (k/w)*M*P - j*Pm - h*Pm,                                  # Pm
-        h*Pm - a*Pa,                                                       # Pa
+        k*Me*P + (k/w)*M*P - j*Pb - h*Pb,                                  # Pb
+        h*Pb - a*Pa,                                                       # Pa
         a*Pa - g*Pu,                                                       # Pu
         g*(Ap/Ae)*Pu - f*E + b*Eu - (k/w)*E*M + j*Em,                      # E
         (k/w)*E*M - h*Em - j*Em,                                           # Em
         h*Em - a*Ea,                                                       # Ea
         -b*Eu + a*Ea - z*Eu,                                               # Eu
-        -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))  # M
+        -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pb) - vmax*M/(V*(Km + M))  # M
     ]
     
     return dy
@@ -45,7 +45,7 @@ def plot_model(Me, params = [8.3e-5, 100 / 2188, 32, 100, .25, 47, 314, 1, 10, 1
     # establish initial conditions
     initial = [10, 0, 10, 10, 10, 10, 10, 10, 10, 500]
     times = np.linspace(0, 60, 200)
-    labels = ['P', 'Pe', 'Pm', 'Pa', 'Pu', 'E', 'Em', 'Ea', 'Eu', 'M']
+    labels = ['P', 'Pe', 'Pb', 'Pa', 'Pu', 'E', 'Em', 'Ea', 'Eu', 'M']
 
     # solve using solve_ivp
     system = lambda t, states: eisosome_model(states, t, Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2)
@@ -72,24 +72,24 @@ def compute_steady_states():
         dM with steady states for other equations substituted in"""
     
     # Define sympy variables
-    P, Pe, Pm, Pa, Pu, E, Em, Ea, Eu, M = sy.symbols("P, Pe, Pm, Pa, Pu, E, Em, Ea, Eu, M")
+    P, Pe, Pb, Pa, Pu, E, Em, Ea, Eu, M = sy.symbols("P, Pe, Pb, Pa, Pu, E, Em, Ea, Eu, M")
     Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2 = sy.symbols("Me, y, k, w, j, f, Ae, Ap, a, h, b, z, g, V, vmax, Km, k1, k2")
 
     # Define differential equations
-    dP  = y - k*Me*P - (k/w)*M*P + j*Pm + f*(Ae/Ap)*E + k1*Pe - k2*P
+    dP  = y - k*Me*P - (k/w)*M*P + j*Pb + f*(Ae/Ap)*E + k1*Pe - k2*P
     dPe = k2*P - k1*Pe
-    dPm = k*Me*P + (k/w)*M*P - j*Pm - h*Pm
-    dPa = h*Pm - a*Pa
+    dPb = k*Me*P + (k/w)*M*P - j*Pb - h*Pb
+    dPa = h*Pb - a*Pa
     dPu = a*Pa - g*Pu
     dE  = g*(Ap/Ae)*Pu - f*E + b*Eu - (k/w)*E*M + j*Em
     dEm = (k/w)*E*M - h*Em - j*Em
     dEa = h*Em - a*Ea
     dEu = -b*Eu + a*Ea - z*Eu
-    dM  = -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pm) - vmax*M/(V*(Km + M))
+    dM  = -(k/w)*M*((Ap / V)*P + (Ae / V)*E) + (j + a)*((Ae / V)*Em + (Ap / V)*Pb) - vmax*M/(V*(Km + M))
 
     # Make lists with equations and variables
-    eqs = [dP, dPe, dPm, dPa, dPu, dE, dEm, dEa, dEu]
-    var = [P,  Pe,  Pm,  Pa,  Pu,  E,  Em,  Ea,  Eu]
+    eqs = [dP, dPe, dPb, dPa, dPu, dE, dEm, dEa, dEu]
+    var = [P,  Pe,  Pb,  Pa,  Pu,  E,  Em,  Ea,  Eu]
 
     # Use sympy to solve symbolically
     steady_states = sy.solve(eqs, var)
@@ -109,7 +109,7 @@ STEADY_STATES = {'E': (Ap*h*b*y*w + Ap*h*z*y*w + Ap*b*j*y*w + Ap*z*j*y*w)/(Ae*M*
                  'P': (M*h**2*z*k*y*w + M*h*z*k*j*y*w + h**2*b*f*y*w**2 + h**2*z*f*y*w**2 + 2*h*b*f*j*y*w**2 + 2*h*z*f*j*y*w**2 + b*f*j**2*y*w**2 + z*f*j**2*y*w**2)/(M**2*h**2*z*k**2 + M*Me*h**2*z*k**2*w), 
                  'Pa': (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h*z*k*a), 
                  'Pe': (M*h**2*z*k*k2*y*w + M*h*z*k*j*k2*y*w + h**2*b*f*k2*y*w**2 + h**2*z*f*k2*y*w**2 + 2*h*b*f*j*k2*y*w**2 + 2*h*z*f*j*k2*y*w**2 + b*f*j**2*k2*y*w**2 + z*f*j**2*k2*y*w**2)/(M**2*h**2*z*k**2*k1 + M*Me*h**2*z*k**2*k1*w), 
-                 'Pm': (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h**2*z*k), 
+                 'Pb': (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h**2*z*k), 
                  'Pu': (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h*z*k*g)}
 dM_EQ = -M*k*(Ap*(M*h**2*z*k*y*w + M*h*z*k*j*y*w + h**2*b*f*y*w**2 + h**2*z*f*y*w**2 + 2*h*b*f*j*y*w**2 + 2*h*z*f*j*y*w**2 + b*f*j**2*y*w**2 + z*f*j**2*y*w**2)/(V*(M**2*h**2*z*k**2 + M*Me*h**2*z*k**2*w)) + (Ap*h*b*y*w + Ap*h*z*y*w + Ap*b*j*y*w + Ap*z*j*y*w)/(M*V*h*z*k))/w - M*vmax/(V*(Km + M)) + (j + a)*(Ap*(M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*V*h**2*z*k) + (Ap*b*y + Ap*z*y)/(V*h*z))
 
@@ -213,18 +213,18 @@ def mup1_methionine_plot(parameters=[8.3e-5, 100 / 2188, 32, 100, .25, 47, 314, 
                      "P": (M*h**2*z*k*y*w + M*h*z*k*j*y*w + h**2*b*f*y*w**2 + h**2*z*f*y*w**2 + 2*h*b*f*j*y*w**2 + 2*h*z*f*j*y*w**2 + b*f*j**2*y*w**2 + z*f*j**2*y*w**2)/(M**2*h**2*z*k**2 + M*Me*h**2*z*k**2*w), 
                      "Pa": (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h*z*k*a), 
                      "Pe": (M*h**2*z*k*k2*y*w + M*h*z*k*j*k2*y*w + h**2*b*f*k2*y*w**2 + h**2*z*f*k2*y*w**2 + 2*h*b*f*j*k2*y*w**2 + 2*a*z*f*j*k2*y*w**2 + b*f*j**2*k2*y*w**2 + z*f*j**2*k2*y*w**2)/(M**2*h**2*z*k**2*k1 + M*Me*h**2*z*k**2*k1*w), 
-                     "Pm": (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h**2*z*k), 
+                     "Pb": (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h**2*z*k), 
                      "Pu": (M*h*z*k*y + h*b*f*y*w + h*z*f*y*w + b*f*j*y*w + z*f*j*y*w)/(M*h*z*k*g)}
     
     # Set up equations for plotting
-    PM_eq = sy.lambdify([M, Me], steady_states['P'] + steady_states['Pa'] + steady_states['Pm'] + steady_states['Pu'])
+    Pb_eq = sy.lambdify([M, Me], steady_states['P'] + steady_states['Pa'] + steady_states['Pb'] + steady_states['Pu'])
     Endosome_eq = sy.lambdify([M, Me], steady_states['E'] + steady_states['Ea'] + steady_states["Em"] + steady_states["Eu"])
     eisosome_only = sy.lambdify([M, Me], steady_states['Pe'])
-    total = lambda M, Me: PM_eq(M, Me) + Endosome_eq(M, Me) + eisosome_only(M, Me)
+    total = lambda M, Me: Pb_eq(M, Me) + Endosome_eq(M, Me) + eisosome_only(M, Me)
     M_eq = lambda Me: bisection_method(Me, dM_eq, params=parameters)
 
     # plot equations
-    plt.plot(Me_vals, [PM_eq(M_eq(m), m) for m in Me_vals], label="Plasma Membrane")
+    plt.plot(Me_vals, [Pb_eq(M_eq(m), m) for m in Me_vals], label="Plasma Membrane")
     plt.plot(Me_vals, [Endosome_eq(M_eq(m), m) for m in Me_vals], label="Endosome")
     plt.plot(Me_vals, [eisosome_only(M_eq(m), m) for m in Me_vals], label="Eisosome")
     plt.plot(Me_vals, [total(M_eq(m), m) for m in Me_vals], label="Total")
