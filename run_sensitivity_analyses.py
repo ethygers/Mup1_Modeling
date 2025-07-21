@@ -246,7 +246,7 @@ def plot_results(aggregated, barsize=0.15, include_sigma=True, include_mu=False,
     # plt.savefig(f'{output_dir}/sensitivity_plots{label}.png')
     plt.show()
 
-def scatter_plot(results, aggregated=None, output_dir=None):
+def scatter_plot(results, aggregated=None, output_dir=None, title=None, show=True):
     """Plot a scatter plot of the mu_star and sigma results from Morris sensitivity analysis (used morris to sample and analyze).
     
     Parameters
@@ -275,7 +275,10 @@ def scatter_plot(results, aggregated=None, output_dir=None):
     for i, label in enumerate(labels):   # label each point
         plt.annotate(label, (mu_vals[i], sigma_vals[i]), (5, 5), textcoords='offset points',
                      ha='left', va='bottom')
-    plt.title("Morris Sensitivity Analysis")
+    if title:
+        plt.title(title)
+    else:
+        plt.title("Morris Sensitivity Analysis")
     plt.xlabel("$\mu$")
     plt.ylabel("$\sigma$")
     plt.tight_layout()
@@ -283,7 +286,8 @@ def scatter_plot(results, aggregated=None, output_dir=None):
     # save and show
     if output_dir:
         plt.savefig(output_dir)
-    plt.show()
+    if show:
+        plt.show()
 
 def mup1_model(t, system, parameters):
     """Function coding the Mup1 trafficking model.
