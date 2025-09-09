@@ -9,6 +9,8 @@ from tqdm import tqdm
 import json
 from datetime import datetime
 import matplotlib.pyplot as plt
+from time import perf_counter
+from scipy.integrate import solve_ivp
 
 def run_single_sensitivity_analysis(param_values, problem, model_func, seed=None):
     """Run a single sensitivity analysis with given parameters.
@@ -29,9 +31,12 @@ def run_single_sensitivity_analysis(param_values, problem, model_func, seed=None
     dict
         Dictionary containing sensitivity indices and metadata
     """
+    start = perf_counter()
+
     # Run model evaluations
-    with Pool(3) as pool:
-        Y = list(tqdm(pool.map(model_func, param_values),
+    print("Starting Multiprocessing")
+    with Pool() as pool:
+        Y = list(tqdm(pool.imap(model_func, param_values),
                         total=len(param_values),
                         desc="Running single iteration in parallel"))
     
@@ -40,7 +45,8 @@ def run_single_sensitivity_analysis(param_values, problem, model_func, seed=None
     Si = morris_analyze.analyze(problem, Y, calc_second_order=True, seed=seed)
     
     # Store results with metadata
-    results = {'timestamp': datetime.now().isoformat(),
+    results = {'N_value': len(Y) / 10,
+        'time': perf_counter() - start,
         'seed': None,
         'sensitivity_indices': {
             'mu': Si['mu'].tolist(),
@@ -49,58 +55,6 @@ def run_single_sensitivity_analysis(param_values, problem, model_func, seed=None
             'sigma': Si['sigma'].tolist() if 'sigma' in Si else None,
         },
         'parameter_names': problem['names']}
-    
-    return results
-
-def run_parallel_sensitivity_analyses(problem, model_func, n_runs=10, n_samples=32, n_processes=2):
-    """Run multiple sensitivity analyses in parallel.
-    
-    Parameters
-    ----------
-    problem : dict
-        Problem definition for SALib
-    model_func : callable
-        Function that evaluates the model
-    n_runs : int
-        Number of sensitivity analyses to run
-    n_samples : int
-        Number of samples per analysis
-    n_processes : int, optional
-        Number of processes to use (defaults to CPU count)
-        
-    Returns
-    -------
-    list
-        List of results from each sensitivity analysis
-    """
-    if n_processes is None:
-        n_processes = cpu_count()
-    
-    # Generate seeds for reproducibility
-    seeds = np.random.randint(0, 2**32, size=n_runs)
-    
-    # Create partial function with fixed arguments
-    run_analysis = partial(
-        run_single_sensitivity_analysis,
-        problem=problem,
-        model_func=model_func
-    )
-    
-    # Prepare arguments for parallel processing
-    args = []
-    for seed in seeds:
-        # Generate parameter samples for this run
-        param_values = morris_sample.sample(problem, n_samples)
-        args.append(param_values)
-    
-    # Run analyses in parallel
-    with ThreadPool(n_processes) as pool:
-        print("Begin Multiprocessing")
-        results = list(tqdm(
-            pool.map(run_analysis, args),
-            total=n_runs,
-            desc="Running sensitivity analyses"
-        ))
     
     return results
 
@@ -319,58 +273,82 @@ def mup1_model(t, system, parameters):
 
     return dy
 
+### Fur4 Parameters ###
+a = 1         # *ubiquitination rate (ms^{-1})
+Ae = 47       # endosomal membrane surface area (micrometers^3)
+Ap = 314      # plasma membrane surface area (micrometers^3)
+b = 1         # *deubiquitination rate (ms^{-1})
+f = 0.25      # *fur4 recycling rate (ms^{-1})
+g = 0.1       # *fur4 endocytosis rate (ms^{-1})
+j = 10**2     # *uracil unbinding rate (ms^{-1})
+Kd = 0.74     # uracil dissociation constant (micromolars)
+k = j / Kd    # *uracil binding rate (micromolars^{-1}ms^{-1})
+Km = 2.5      # uracil Michaelis-Menten constant (micromolars)
+V = 523       # volume of cytoplasm (micrometers^3)
+vmax = 88 / 6 # maximal rate of uracil metabolism (micrommolars*micrometers^3ms^{-1})
+w = 32        # scale factor for pH
+y = 5 / 6000  # *fur4 production rate (# Fur4)*ms^{-1}
+z = 0.002     # *degradation rate (ms^{-1})
+
+def fur4_model(t, y, parameters):
+
+    # unpack parameters
+    P, Pb, Pu, E, Eb, Eu, S = y
+    a, b, f, g, j, k, y, z, Se = parameters
+    # k = j / Kd
+    
+    # Define derivatives
+    dP = y - (k * Se * P) - ((k / w) * S * P) + (j * Pb) + (f * (Ae / Ap) * E)
+    dPb = (k * Se * P) + ((k / w) * S * P) - (j * Pb) - (a * Pb)
+    dPu = (a * Pb) - (g * Pu)
+    dE = (b * Eu) - ((k / w) * S * E) + (j * Eb) - (f * E)
+    dEb = ((k / w) * S * E) - (j * Eb) - (a * Eb)
+    dEu = (g * (Ap / Ae) * Pu) - (b * Eu) + (a * Eb) - (z * Eu)
+    dS = - ((k / w) * S * ((Ap / V) * P + (Ae / V) * E)) + ((j + a) *
+        ((Ap / V) * Pb + (Ae / V) * Eb)) - ((vmax * S) / (V * (Km + S)))
+    
+    return [dP, dPb, dPu, dE, dEb, dEu, dS]
+
+# helper function to help with parallelization
+def run_model_fur4(X):
+    y0 = [0, 0, 0, 0, 0, 0, 0]
+    t_span = (0, 50)
+    t_eval = np.linspace(*t_span, 10)
+
+    sol = solve_ivp(fur4_model, t_span, y0, args=(X,), t_eval=t_eval)
+    return sum(sol.y[:, -1])  # sum excluding extracellular uracil
+
 # Example usage:
 if __name__ == "__main__":
-    # Define your problem
+    ### FOR FUR4 ###
+
+    parameter_ranges = [   # (z, k, S_e, b, y, a, f, j, g)
+        [0.0002, 0.02],        # z: degradation
+        [10/.74, 1000/.74],    # k: uracil binding rate (depends on j and kd)
+        [0.0001, 1],           # Se: extracellular uracil
+        [0.1, 10],             # b: deubiquitination rate
+        [5/60000, 5/600],      # y: production
+        [0.1, 10],             # a: ubiquitination
+        [0.025, 2.5],          # f: recycling rate
+        [10, 1000],            # j: unbinding
+        [0.01, 1]              # g: endocytosis rate
+    ]
+
+    # set up the problem
     problem = {
-        'num_vars': 16,
-        'names': ['y', 'w', 'j', 'kd', 'f', 'Ae', 'Ap', 'a', 'h', 'b', 'z', 'g', 'V', 'vmax', 'Km', 'Me'],
-        'bounds': [[8.3e-6, 8.3e-4],      # y: Mup1 production rate – production rates can vary over orders of magnitude due to transcriptional and translational regulation, environmental cues, and promoter strength.
-                    [10, 100],            # w: pH scale factor – this is a unitless scaling factor, and while its exact biological interpretation may vary, a range of 1 order of magnitude allows for exploratory analysis without being too speculative.
-                    [10, 1000],           # j: Methionine unbinding rate – binding and unbinding kinetics often vary by 1–2 orders of magnitude depending on temperature, affinity, and conformational state.
-                    [1000, 90000],        # kd: Dissociation constant – dissociation constants vary widely across protein-ligand systems; range chosen to reflect affinities from high (1 μM) to low (90 μM) binding strength.
-                    # k is derived from j/kd, so it should not be varied independently – vary j and kd instead
-                    [0.025, 2.5],         # f: Recycling rate – endosomal recycling rates can vary depending on the type of cargo, regulatory proteins, and metabolic state; 1 order of magnitude captures plausible biological fluctuation.
-                    [20, 100],            # Ae: Endosomal surface area – endosomal sizes (and hence surface areas) differ based on maturation stage and cell size; this range allows for ~5x variation while remaining realistic for yeast cells.
-                    [100, 1000],          # Ap: Plasma membrane surface area – reflects variability in yeast cell size; 3–10 μm diameter cells yield surface areas within this range.
-                    [0.1, 10],            # a: Ubiquitination rate – enzymatic tagging rates are context-dependent, influenced by E3 ligase concentration and substrate type; range spans 2 orders of magnitude.
-                    [1, 100],             # h: Art1 binding rate – ART protein interactions with transporters can vary widely depending on substrate conformation and signaling state; large range allows for nonlinearity exploration.
-                    [0.1, 10],            # b: Deubiquitination rate – affected by availability of deubiquitinases and substrate accessibility; same logic as for ubiquitination rate.
-                    [0.0002, 0.02],       # z: Degradation rate – protein degradation is generally slow, but this range captures variation due to stress conditions, proteasome targeting, or trafficking dynamics.
-                    [0.01, 1],            # g: Endocytosis rate – strongly regulated and responsive to signaling, nutrient levels, and surface cargo density; up to 100-fold variability is plausible.
-                    [200, 1000],          # V: Cytoplasmic volume – yeast cells range from ~30 to ~100 fL; cytoplasmic volume varies with cell cycle stage and environmental conditions.
-                    [1e4, 1e6],           # vmax: Max methionine metabolism rate – reflects possible differences in metabolic enzyme expression, post-translational regulation, and methionine flux capacity.
-                    [50, 1000],           # Km: Michaelis constant – Km values commonly vary across enzymes and contexts; this range includes both high-affinity (low Km) and low-affinity (high Km) scenarios.
-                    [0.1, 500],           # Me: Extracellular methionine concentration – based on reported yeast media compositions (from starvation up to rich media); range spans near-zero to saturating conditions.
-                ]
+        'num_vars': 9,
+        'names': ['z', 'k', 'S_e', 'b', 'y', 'a', 'f', 'j', 'g'],
+        'bounds': parameter_ranges
     }
-    
-    from scipy.integrate import solve_ivp
 
-    # Define your model function
-    def model_func(X):
-        y0 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        t_span = (0, 50)
-        t_eval = np.linspace(*t_span, 10)
-        print('...')
-    
-        sol = solve_ivp(mup1_model, t_span, y0, args=(X,), t_eval=t_eval)
-        print("..")
-        return sum(sol.y[:, -1])
-    
-    # Run parallel sensitivity analyses
-    results = run_parallel_sensitivity_analyses(
-        problem=problem,
-        model_func=model_func,
-        n_runs=10,
-        n_samples=1024
-    )
-    
-    # Aggregate results
-    aggregated = aggregate_results(results)
-    
-    # # Create plots
-    # plot_results(aggregated) 
+    # generate samples and run sensitivity analysis
+    for i in range(5):
+        param_values = morris_sample.sample(problem, 32768)
+        result = run_single_sensitivity_analysis(param_values, problem, run_model_fur4)
+        print(result)
+        with open("Results/morris_sensitivity.txt", 'a') as f:
+            f.write(f"{result}\n")
+        print(f"Saving result to Results/morris_sensitivity")
 
-
-    # take out parameters we know for sure and then compare it to Fur4 plot
+    print("Finished running 5 sensitivity analyses. Results saved to morris_sensitivity.txt.")
+    
